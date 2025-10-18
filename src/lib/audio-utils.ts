@@ -164,6 +164,7 @@ export function playAudio(
   buffer: AudioBuffer,
   start: number = 0, // in seconds
   duration?: number, // in seconds
+  loop: boolean = false,
   onEnded?: () => void
 ) {
   stopAudio();
@@ -171,17 +172,26 @@ export function playAudio(
   source = context.createBufferSource();
   source.buffer = buffer;
   source.connect(context.destination);
+  source.loop = loop;
+  if(loop) {
+    source.loopStart = start;
+    source.loopEnd = start + (duration ?? (buffer.duration - start));
+  }
   source.onended = () => {
-    onEnded?.();
-    source = null;
+    if (!source?.loop) {
+      onEnded?.();
+      source = null;
+    }
   };
-  source.start(0, start, duration);
+  source.start(0, start, loop ? undefined : duration);
 }
 
 export function stopAudio() {
   if (source) {
+    source.loop = false; // Stop looping before stopping
     source.stop();
     source.disconnect();
+    source.onended = null;
     source = null;
   }
 }

@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import type { Slice } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Scissors, Play, Pause } from "lucide-react";
+import { Scissors, Play, Pause, Repeat } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { playAudio, stopAudio } from "@/lib/audio-utils";
 
@@ -25,6 +25,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
+  const [isLooping, setIsLooping] = useState(false);
   const { toast } = useToast();
 
   const draw = useCallback(() => {
@@ -57,7 +58,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     if (selection) {
       ctx.strokeStyle = "hsl(var(--primary))";
       ctx.lineWidth = 2;
-      ctx.fillStyle = playingSliceId === 'selection' ? "hsla(var(--primary), 0.2)" : "hsla(var(--primary), 0.1)";
+      ctx.fillStyle = playingSliceId === 'selection' || playingSliceId === 'selection_loop' ? "hsla(var(--primary), 0.2)" : "hsla(var(--primary), 0.1)";
       const startX = selection.start * width;
       const endX = selection.end * width;
       ctx.strokeRect(startX, 0, endX - startX, height);
@@ -109,6 +110,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     setIsSelecting(true);
     stopAudio();
     setPlayingSliceId(null);
+    setIsLooping(false);
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const start = x / rect.width;
@@ -131,6 +133,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     if(selection && selection.end - selection.start > 0.001) {
         onSlice(selection.start, selection.end);
         setSelection(null);
+        setIsLooping(false);
     } else {
         toast({
             variant: "destructive",
@@ -140,18 +143,27 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     }
   }
 
-  const handlePlaySelection = () => {
+  const handlePlaySelection = (loop = false) => {
     if (!selection) return;
-    if (playingSliceId === 'selection') {
+
+    const currentPlayingId = loop ? 'selection_loop' : 'selection';
+
+    if (playingSliceId === currentPlayingId) {
       stopAudio();
       setPlayingSliceId(null);
+      setIsLooping(false);
     } else {
       const start = selection.start * audioBuffer.duration;
       const duration = (selection.end - selection.start) * audioBuffer.duration;
-      playAudio(audioBuffer, start, duration, () => setPlayingSliceId(null));
-      setPlayingSliceId('selection');
+      playAudio(audioBuffer, start, duration, loop, () => {
+        setPlayingSliceId(null);
+        setIsLooping(false);
+      });
+      setPlayingSliceId(currentPlayingId);
+      setIsLooping(loop);
     }
   };
+
 
   return (
     <div className="flex flex-col gap-4 flex-grow">
@@ -167,9 +179,13 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       </div>
       {selection && (
           <div className="flex justify-end gap-2">
-               <Button onClick={handlePlaySelection} variant="outline">
-                  {playingSliceId === 'selection' ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
+               <Button onClick={() => handlePlaySelection(false)} variant="outline">
+                  {playingSliceId === 'selection' && !isLooping ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
                   Play Selection
+              </Button>
+              <Button onClick={() => handlePlaySelection(true)} variant={isLooping ? "default" : "outline"}>
+                  <Repeat className="mr-2 h-4 w-4" />
+                  Loop
               </Button>
               <Button onClick={handleCreateSlice}>
                   <Scissors className="mr-2 h-4 w-4" />

@@ -101,9 +101,10 @@ const SliceList: React.FC<SliceListProps> = ({
       stopAudio();
       setPlayingSliceId(null);
     } else {
+      stopAudio();
       const startInSeconds = slice.start / audioBuffer.sampleRate;
       const durationInSeconds = (slice.end - slice.start) / audioBuffer.sampleRate;
-      playAudio(audioBuffer, startInSeconds, durationInSeconds, () => setPlayingSliceId(null));
+      playAudio(audioBuffer, startInSeconds, durationInSeconds, false, () => setPlayingSliceId(null));
       setPlayingSliceId(slice.id);
     }
   };
