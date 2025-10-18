@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import type { Slice } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Copy, Download, GripVertical, Pause, Play, Trash2 } from "lucide-react";
+import { Copy, Download, GripVertical, Pause, Play, Repeat, Trash2 } from "lucide-react";
 import { bufferToWav, playAudio, stopAudio } from "@/lib/audio-utils";
 import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
@@ -41,6 +41,7 @@ const SliceList: React.FC<SliceListProps> = ({
 }) => {
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
+  const [loopingSliceId, setLoopingSliceId] = useState<string | null>(null);
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
     dragItem.current = index;
@@ -136,23 +137,31 @@ const SliceList: React.FC<SliceListProps> = ({
     URL.revokeObjectURL(url);
   };
   
-  const handlePlayToggle = (slice: Slice) => {
-    if (playingSliceId === slice.id) {
-      stopAudio();
-      setPlayingSliceId(null);
+  const handlePlayToggle = (slice: Slice, loop = false) => {
+    const isCurrentlyPlaying = playingSliceId === slice.id;
+    const isCurrentlyLooping = loopingSliceId === slice.id;
+
+    if (isCurrentlyPlaying && loop === isCurrentlyLooping) {
+        stopAudio();
+        setPlayingSliceId(null);
+        setLoopingSliceId(null);
     } else {
-      stopAudio();
-      const startInSeconds = slice.start / audioBuffer.sampleRate;
-      const durationInSeconds = (slice.end - slice.start) / audioBuffer.sampleRate;
-      playAudio(
-        audioBuffer, 
-        startInSeconds, 
-        durationInSeconds, 
-        false, 
-        () => setPlayingSliceId(null),
-        (progress) => setPlaybackProgress(progress)
-      );
-      setPlayingSliceId(slice.id);
+        stopAudio();
+        const startInSeconds = slice.start / audioBuffer.sampleRate;
+        const durationInSeconds = (slice.end - slice.start) / audioBuffer.sampleRate;
+        playAudio(
+            audioBuffer,
+            startInSeconds,
+            durationInSeconds,
+            loop,
+            () => {
+                setPlayingSliceId(null);
+                setLoopingSliceId(null);
+            },
+            (progress) => setPlaybackProgress(progress)
+        );
+        setPlayingSliceId(slice.id);
+        setLoopingSliceId(loop ? slice.id : null);
     }
   };
 
@@ -217,34 +226,37 @@ const SliceList: React.FC<SliceListProps> = ({
             </div>
             <div className="flex flex-col gap-1 shrink-0">
                 <Button variant="ghost" size="icon" onClick={() => handlePlayToggle(slice)} className="z-10 h-8 w-8">
-                {playingSliceId === slice.id ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                  {playingSliceId === slice.id && loopingSliceId !== slice.id ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                </Button>
+                <Button variant={loopingSliceId === slice.id ? "default" : "ghost"} size="icon" onClick={() => handlePlayToggle(slice, true)} className="z-10 h-8 w-8">
+                    <Repeat className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="icon" onClick={() => handleDuplicate(slice.id)} className="z-10 h-8 w-8">
                     <Copy className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="icon" onClick={() => handleDownload(slice)} className="z-10 h-8 w-8">
-                <Download className="h-4 w-4" />
+                  <Download className="h-4 w-4" />
                 </Button>
                 <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/20 z-10 h-8 w-8">
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This will permanently delete the slice "{slice.name}". This action cannot be undone.
-                    </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => handleDelete(slice.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                        Delete
-                    </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
+                  <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/20 z-10 h-8 w-8">
+                          <Trash2 className="h-4 w-4" />
+                      </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                      <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                          This will permanently delete the slice "{slice.name}". This action cannot be undone.
+                      </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleDelete(slice.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Delete
+                      </AlertDialogAction>
+                      </AlertDialogFooter>
+                  </AlertDialogContent>
                 </AlertDialog>
             </div>
           </div>
