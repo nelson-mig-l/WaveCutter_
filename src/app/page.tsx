@@ -11,7 +11,7 @@ import SliceControls from "@/components/wave-cutter/slice-controls";
 import SliceList from "@/components/wave-cutter/slice-list";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Music, Pause, Play } from "lucide-react";
+import { ArrowUp, Download, Music, Pause, Play } from "lucide-react";
 
 export default function Home() {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
@@ -201,16 +201,27 @@ export default function Home() {
                   setPlayingSliceId(null);
                   setSlices([]);
                 }}
-                onDownloadAll={handleDownloadAll}
-                onPlayAll={handlePlayAll}
-                isPlayingAll={playingSliceId === 'all'}
                 hasSlices={slices.length > 0}
               />
             </div>
             <div className="border border-primary/50 p-4 flex flex-col gap-4">
-              <h2 className="text-2xl flex items-center gap-2">
-                <ArrowUp className="transform rotate-45" /> Slices
-              </h2>
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl flex items-center gap-2">
+                  <ArrowUp className="transform rotate-45" /> Slices
+                </h2>
+                {slices.length > 0 && (
+                   <div className="flex gap-2">
+                      <Button onClick={handlePlayAll} variant="outline" size="sm">
+                        {playingSliceId === 'all' ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
+                        Play All
+                      </Button>
+                      <Button onClick={handleDownloadAll} size="sm">
+                        <Download className="mr-2 h-4 w-4" />
+                        Download
+                      </Button>
+                   </div>
+                )}
+              </div>
               <SliceList
                 slices={slices}
                 setSlices={setSlices}

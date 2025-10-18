@@ -2,26 +2,20 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Zap, Trash2, Download, Play, Pause } from "lucide-react";
+import { Zap, Trash2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 
 interface SliceControlsProps {
   onAutoSlice: (threshold: number) => void;
   onClearSlices: () => void;
-  onDownloadAll: () => void;
-  onPlayAll: () => void;
   hasSlices: boolean;
-  isPlayingAll: boolean;
 }
 
 const SliceControls: React.FC<SliceControlsProps> = ({
   onAutoSlice,
   onClearSlices,
-  onDownloadAll,
-  onPlayAll,
   hasSlices,
-  isPlayingAll,
 }) => {
   const [threshold, setThreshold] = useState(5);
 
@@ -48,17 +42,9 @@ const SliceControls: React.FC<SliceControlsProps> = ({
         </Button>
         {hasSlices && (
           <>
-            <Button onClick={onPlayAll} variant="outline">
-              {isPlayingAll ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
-              Play All
-            </Button>
             <Button onClick={onClearSlices} variant="destructive">
               <Trash2 className="mr-2 h-4 w-4" />
               Clear Slices
-            </Button>
-            <Button onClick={onDownloadAll}>
-              <Download className="mr-2 h-4 w-4" />
-              Download Rearranged
             </Button>
           </>
         )}
