@@ -17,7 +17,7 @@ export function findPeaks(
   const audioData = audioBuffer.getChannelData(0);
   const sampleRate = audioBuffer.sampleRate;
   const minSilenceSamples = minSilenceDuration * sampleRate;
-  const minSliceSamples = minSliceDuration * samplerate;
+  const minSliceSamples = minSliceDuration * sampleRate;
 
   let slices: { start: number; end: number }[] = [];
   let inSlice = false;
