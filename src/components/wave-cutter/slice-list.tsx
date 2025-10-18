@@ -173,7 +173,7 @@ const SliceList: React.FC<SliceListProps> = ({
 
   return (
     <ScrollArea className="flex-grow">
-      <div className="flex flex-col gap-4 pr-4">
+      <div className="flex flex-col gap-2 pr-4">
         {slices.map((slice, index) => (
           <div
             key={slice.id}
@@ -193,53 +193,50 @@ const SliceList: React.FC<SliceListProps> = ({
                 }}
             />
             <GripVertical className="cursor-grab text-primary/50 shrink-0" />
-            <div className="flex-grow flex flex-col gap-2">
-                <Input
+            <Input
                 value={slice.name}
                 onChange={(e) => handleNameChange(slice.id, e.target.value)}
-                className="bg-transparent border-0 focus-visible:ring-1 focus-visible:ring-ring text-base z-10 h-auto p-0"
+                className="bg-transparent border-0 focus-visible:ring-1 focus-visible:ring-ring text-base z-10 h-8 flex-grow p-1 w-24"
+            />
+            <div className="flex gap-1 items-center z-10">
+                <Label htmlFor={`start-${slice.id}`} className="text-xs">Start:</Label>
+                <Input 
+                    id={`start-${slice.id}`}
+                    type="number"
+                    step="0.01"
+                    value={(slice.start / audioBuffer.sampleRate).toFixed(3)}
+                    onChange={(e) => handleTimeChange(slice.id, 'start', e.target.value)}
+                    className="bg-card h-8 w-20 text-xs z-10"
                 />
-                <div className="flex gap-2 items-center">
-                    <div className="flex flex-col gap-1 text-xs">
-                        <Label htmlFor={`start-${slice.id}`}>Start</Label>
-                        <Input 
-                            id={`start-${slice.id}`}
-                            type="number"
-                            step="0.01"
-                            value={(slice.start / audioBuffer.sampleRate).toFixed(3)}
-                            onChange={(e) => handleTimeChange(slice.id, 'start', e.target.value)}
-                            className="bg-card h-8 w-24 text-xs z-10"
-                        />
-                    </div>
-                     <div className="flex flex-col gap-1 text-xs">
-                        <Label htmlFor={`end-${slice.id}`}>End</Label>
-                        <Input 
-                             id={`end-${slice.id}`}
-                            type="number"
-                            step="0.01"
-                            value={(slice.end / audioBuffer.sampleRate).toFixed(3)}
-                            onChange={(e) => handleTimeChange(slice.id, 'end', e.target.value)}
-                            className="bg-card h-8 w-24 text-xs z-10"
-                        />
-                    </div>
-                </div>
             </div>
-            <div className="flex flex-col gap-1 shrink-0">
-                <Button variant="ghost" size="icon" onClick={() => handlePlayToggle(slice)} className="z-10 h-8 w-8">
+            <div className="flex gap-1 items-center z-10">
+                <Label htmlFor={`end-${slice.id}`} className="text-xs">End:</Label>
+                <Input 
+                        id={`end-${slice.id}`}
+                    type="number"
+                    step="0.01"
+                    value={(slice.end / audioBuffer.sampleRate).toFixed(3)}
+                    onChange={(e) => handleTimeChange(slice.id, 'end', e.target.value)}
+                    className="bg-card h-8 w-20 text-xs z-10"
+                />
+            </div>
+
+            <div className="flex gap-1 shrink-0 z-10">
+                <Button variant="ghost" size="icon" onClick={() => handlePlayToggle(slice)} className="h-8 w-8">
                   {playingSliceId === slice.id && loopingSliceId !== slice.id ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                 </Button>
-                <Button variant={loopingSliceId === slice.id ? "default" : "ghost"} size="icon" onClick={() => handlePlayToggle(slice, true)} className="z-10 h-8 w-8">
+                <Button variant={loopingSliceId === slice.id ? "default" : "ghost"} size="icon" onClick={() => handlePlayToggle(slice, true)} className="h-8 w-8">
                     <Repeat className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => handleDuplicate(slice.id)} className="z-10 h-8 w-8">
+                <Button variant="ghost" size="icon" onClick={() => handleDuplicate(slice.id)} className="h-8 w-8">
                     <Copy className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => handleDownload(slice)} className="z-10 h-8 w-8">
+                <Button variant="ghost" size="icon" onClick={() => handleDownload(slice)} className="h-8 w-8">
                   <Download className="h-4 w-4" />
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/20 z-10 h-8 w-8">
+                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/20 h-8 w-8">
                           <Trash2 className="h-4 w-4" />
                       </Button>
                   </AlertDialogTrigger>
