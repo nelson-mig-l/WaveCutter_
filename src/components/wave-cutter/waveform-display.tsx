@@ -107,9 +107,9 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
   useEffect(() => {
     draw();
-    const_handleResize = () => draw();
-    window.addEventListener('resize', const_handleResize);
-    return () => window.removeEventListener('resize', const_handleResize);
+    const handleResize = () => draw();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, [draw]);
 
   useEffect(() => {
