@@ -3,7 +3,7 @@
 import React, { useRef } from "react";
 import type { Slice } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Download, GripVertical, Pause, Play, Trash2 } from "lucide-react";
+import { Copy, Download, GripVertical, Pause, Play, Trash2 } from "lucide-react";
 import { bufferToWav, playAudio, stopAudio } from "@/lib/audio-utils";
 import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
@@ -75,6 +75,22 @@ const SliceList: React.FC<SliceListProps> = ({
 
   const handleDelete = (id: string) => {
     setSlices(slices.filter((slice) => slice.id !== id));
+  };
+  
+  const handleDuplicate = (id: string) => {
+    const sliceToDuplicate = slices.find(slice => slice.id === id);
+    if (!sliceToDuplicate) return;
+
+    const newSlice: Slice = {
+      ...sliceToDuplicate,
+      id: `slice_${Date.now()}`,
+      name: `${sliceToDuplicate.name} (copy)`
+    };
+
+    const index = slices.findIndex(slice => slice.id === id);
+    const newSlices = [...slices];
+    newSlices.splice(index + 1, 0, newSlice);
+    setSlices(newSlices);
   };
 
   const handleNameChange = (id: string, newName: string) => {
@@ -202,6 +218,9 @@ const SliceList: React.FC<SliceListProps> = ({
             <div className="flex flex-col gap-1 shrink-0">
                 <Button variant="ghost" size="icon" onClick={() => handlePlayToggle(slice)} className="z-10 h-8 w-8">
                 {playingSliceId === slice.id ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => handleDuplicate(slice.id)} className="z-10 h-8 w-8">
+                    <Copy className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="icon" onClick={() => handleDownload(slice)} className="z-10 h-8 w-8">
                 <Download className="h-4 w-4" />
