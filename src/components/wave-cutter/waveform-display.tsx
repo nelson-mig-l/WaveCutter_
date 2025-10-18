@@ -26,6 +26,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [isLooping, setIsLooping] = useState(false);
+  const [playbackProgress, setPlaybackProgress] = useState<number | null>(null);
   const { toast } = useToast();
 
   const draw = useCallback(() => {
@@ -35,39 +36,30 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
+    if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+    }
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     
-    ctx.scale(dpr, dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const width = canvas.width / dpr;
     const height = canvas.height / dpr;
     const middle = height / 2;
 
     ctx.clearRect(0, 0, width, height);
-
-    // Draw full sample playback indicator
-    if (playingSliceId === 'full_sample') {
-        ctx.fillStyle = "hsla(var(--primary), 0.1)";
-        ctx.fillRect(0, 0, width, height);
-    }
     
     // Draw selection
     if (selection) {
-      ctx.strokeStyle = "hsl(var(--primary))";
-      ctx.lineWidth = 2;
       ctx.fillStyle = playingSliceId === 'selection' || playingSliceId === 'selection_loop' ? "hsla(var(--primary), 0.2)" : "hsla(var(--primary), 0.1)";
       const startX = selection.start * width;
       const endX = selection.end * width;
-      ctx.strokeRect(startX, 0, endX - startX, height);
       ctx.fillRect(startX, 0, endX - startX, height);
     }
 
     // Draw slices
-    ctx.strokeStyle = "hsl(var(--primary))";
-    ctx.lineWidth = 1;
     slices.forEach((slice) => {
       const startX = (slice.start / audioBuffer.length) * width;
       const endX = (slice.end / audioBuffer.length) * width;
@@ -75,6 +67,8 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
           ctx.fillStyle = "hsla(var(--primary), 0.2)";
           ctx.fillRect(startX, 0, endX - startX, height);
       }
+      ctx.strokeStyle = "hsl(var(--primary))";
+      ctx.lineWidth = 1;
       ctx.strokeRect(startX, 0, endX - startX, height);
     });
 
@@ -98,18 +92,38 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     }
     ctx.stroke();
 
-  }, [audioBuffer, slices, selection, playingSliceId]);
+    // Draw playback cursor
+    if (playbackProgress !== null && playingSliceId) {
+        ctx.strokeStyle = "hsl(var(--destructive))";
+        ctx.lineWidth = 1;
+        const x = playbackProgress * width;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+    }
+
+  }, [audioBuffer, slices, selection, playingSliceId, playbackProgress]);
 
   useEffect(() => {
     draw();
-    window.addEventListener('resize', draw);
-    return () => window.removeEventListener('resize', draw);
+    const_handleResize = () => draw();
+    window.addEventListener('resize', const_handleResize);
+    return () => window.removeEventListener('resize', const_handleResize);
   }, [draw]);
+
+  useEffect(() => {
+    if(!playingSliceId) {
+        setPlaybackProgress(null);
+    }
+  }, [playingSliceId]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     setIsSelecting(true);
-    stopAudio();
-    setPlayingSliceId(null);
+    if(playingSliceId) {
+        stopAudio();
+        setPlayingSliceId(null);
+    }
     setIsLooping(false);
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -155,15 +169,21 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     } else {
       const start = selection.start * audioBuffer.duration;
       const duration = (selection.end - selection.start) * audioBuffer.duration;
-      playAudio(audioBuffer, start, duration, loop, () => {
-        setPlayingSliceId(null);
-        setIsLooping(false);
-      });
+      playAudio(
+        audioBuffer,
+        start,
+        duration,
+        loop,
+        () => {
+          setPlayingSliceId(null);
+          setIsLooping(false);
+        },
+        (progress) => setPlaybackProgress(progress)
+      );
       setPlayingSliceId(currentPlayingId);
       setIsLooping(loop);
     }
   };
-
 
   return (
     <div className="flex flex-col gap-4 flex-grow">

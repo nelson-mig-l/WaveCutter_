@@ -152,6 +152,9 @@ export function concatenateAudioBuffers(originalBuffer: AudioBuffer, slices: Sli
 // --- Audio Player ---
 let audioContext: AudioContext | null = null;
 let source: AudioBufferSourceNode | null = null;
+let animationFrameId: number | null = null;
+let playbackStartTime = 0;
+let playbackStartOffset = 0;
 
 function getAudioContext() {
   if (!audioContext || audioContext.state === 'closed') {
@@ -165,7 +168,8 @@ export function playAudio(
   start: number = 0, // in seconds
   duration?: number, // in seconds
   loop: boolean = false,
-  onEnded?: () => void
+  onEnded?: () => void,
+  onProgress?: (progress: number) => void
 ) {
   stopAudio();
   const context = getAudioContext();
@@ -173,25 +177,51 @@ export function playAudio(
   source.buffer = buffer;
   source.connect(context.destination);
   source.loop = loop;
+  
+  playbackStartOffset = start;
+  const totalDuration = duration ?? (buffer.duration - start);
+
   if(loop) {
     source.loopStart = start;
-    source.loopEnd = start + (duration ?? (buffer.duration - start));
+    source.loopEnd = start + totalDuration;
   }
+
   source.onended = () => {
     if (!source?.loop) {
+      stopAudio(); // clean up animation frame
       onEnded?.();
-      source = null;
     }
   };
+  
   source.start(0, start, loop ? undefined : duration);
+  playbackStartTime = context.currentTime;
+  
+  if (onProgress) {
+    const progressLoop = () => {
+      if (source) {
+        const elapsedTime = context.currentTime - playbackStartTime;
+        let currentProgress = (elapsedTime / totalDuration) % 1;
+        if(loop) {
+            onProgress(playbackStartOffset/buffer.duration + currentProgress * (totalDuration/buffer.duration));
+        } else {
+            onProgress( (playbackStartOffset + elapsedTime) / buffer.duration);
+        }
+        animationFrameId = requestAnimationFrame(progressLoop);
+      }
+    };
+    animationFrameId = requestAnimationFrame(progressLoop);
+  }
 }
 
 export function stopAudio() {
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
   if (source) {
-    source.loop = false; // Stop looping before stopping
+    source.onended = null;
     source.stop();
     source.disconnect();
-    source.onended = null;
     source = null;
   }
 }

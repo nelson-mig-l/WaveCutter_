@@ -20,6 +20,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [playingSliceId, setPlayingSliceId] = useState<string | null>(null);
   const { toast } = useToast();
+  const [playbackProgress, setPlaybackProgress] = useState<number | null>(null);
 
   const handleFileLoaded = (buffer: AudioBuffer, fileName: string) => {
     setAudioBuffer(buffer);
@@ -113,7 +114,14 @@ export default function Home() {
       setPlayingSliceId(null);
     } else {
       stopAudio();
-      playAudio(audioBuffer, 0, undefined, () => setPlayingSliceId(null));
+      playAudio(
+        audioBuffer, 
+        0, 
+        undefined,
+        false, 
+        () => setPlayingSliceId(null),
+        (progress) => setPlaybackProgress(progress)
+      );
       setPlayingSliceId('full_sample');
     }
   };
@@ -128,7 +136,18 @@ export default function Home() {
       stopAudio();
       try {
         const concatenatedBuffer = concatenateAudioBuffers(audioBuffer, slices);
-        playAudio(concatenatedBuffer, 0, undefined, () => setPlayingSliceId(null));
+        playAudio(
+          concatenatedBuffer,
+          0,
+          undefined,
+          false,
+          () => setPlayingSliceId(null),
+          (progress) => {
+            // This progress is for the concatenated buffer, not the main one.
+            // We'd need more complex logic to map it back, so we'll ignore it for now.
+            // Or, we could play slices sequentially. For now, no progress on play all.
+          }
+        );
         setPlayingSliceId('all');
       } catch (e) {
         const error = e as Error;
