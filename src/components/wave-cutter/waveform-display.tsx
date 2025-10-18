@@ -150,7 +150,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
   return (
     <div className="flex flex-col gap-4 flex-grow">
-      <div className="flex-grow bg-background relative" style={{ minHeight: '200px' }}>
+      <div className="flex-grow bg-background relative" style={{ minHeight: '100px' }}>
         <canvas
           ref={canvasRef}
           onMouseDown={handleMouseDown}
