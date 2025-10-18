@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Slice } from "@/lib/types";
-import { findPeaks, bufferToWav, concatenateAudioBuffers } from "@/lib/audio-utils";
+import { findPeaks, bufferToWav, concatenateAudioBuffers, playAudio, stopAudio } from "@/lib/audio-utils";
 
 import Header from "@/components/wave-cutter/header";
 import AudioUploader from "@/components/wave-cutter/audio-uploader";
@@ -11,13 +11,14 @@ import SliceControls from "@/components/wave-cutter/slice-controls";
 import SliceList from "@/components/wave-cutter/slice-list";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Music } from "lucide-react";
+import { ArrowUp, Music, Pause, Play } from "lucide-react";
 
 export default function Home() {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [audioFileName, setAudioFileName] = useState<string>("");
   const [slices, setSlices] = useState<Slice[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [playingSliceId, setPlayingSliceId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleFileLoaded = (buffer: AudioBuffer, fileName: string) => {
@@ -25,6 +26,7 @@ export default function Home() {
     setAudioFileName(fileName);
     setSlices([]);
     setIsLoading(false);
+    setPlayingSliceId(null);
   };
 
   const handleFileError = (error: string) => {
@@ -59,8 +61,8 @@ export default function Home() {
     if (!audioBuffer) return;
     const newSlice: Slice = {
       id: `slice_${Date.now()}`,
-      start: Math.floor(start * audioBuffer.sampleRate),
-      end: Math.floor(end * audioBuffer.sampleRate),
+      start: Math.floor(start * audioBuffer.length),
+      end: Math.floor(end * audioBuffer.length),
       name: `Slice ${slices.length + 1}`,
     };
     setSlices([...slices, newSlice].sort((a, b) => a.start - b.start));
@@ -97,10 +99,23 @@ export default function Home() {
   };
   
   const resetApp = () => {
+    stopAudio();
     setAudioBuffer(null);
     setAudioFileName("");
     setSlices([]);
+    setPlayingSliceId(null);
   }
+
+  const handlePlayFullSample = () => {
+    if (!audioBuffer) return;
+    if (playingSliceId === 'full_sample') {
+      stopAudio();
+      setPlayingSliceId(null);
+    } else {
+      playAudio(audioBuffer, 0, undefined, () => setPlayingSliceId(null));
+      setPlayingSliceId('full_sample');
+    }
+  };
 
   return (
     <div className="min-h-screen container mx-auto p-4 md:p-8 flex flex-col gap-6">
@@ -121,16 +136,28 @@ export default function Home() {
                     <Music />
                     <p className="text-xl">{audioFileName}</p>
                  </div>
-                 <Button variant="destructive" size="sm" onClick={resetApp}>Change File</Button>
+                 <div className="flex items-center gap-2">
+                   <Button variant="outline" size="sm" onClick={handlePlayFullSample}>
+                     {playingSliceId === 'full_sample' ? <Pause className="mr-2" /> : <Play className="mr-2" />}
+                     Play Sample
+                   </Button>
+                   <Button variant="destructive" size="sm" onClick={resetApp}>Change File</Button>
+                 </div>
                </div>
               <WaveformDisplay
                 audioBuffer={audioBuffer}
                 slices={slices}
                 onSlice={handleManualSlice}
+                playingSliceId={playingSliceId}
+                setPlayingSliceId={setPlayingSliceId}
               />
               <SliceControls
                 onAutoSlice={handleAutoSlice}
-                onClearSlices={() => setSlices([])}
+                onClearSlices={() => {
+                  stopAudio();
+                  setPlayingSliceId(null);
+                  setSlices([]);
+                }}
                 onDownloadAll={handleDownloadAll}
                 hasSlices={slices.length > 0}
               />
@@ -143,6 +170,8 @@ export default function Home() {
                 slices={slices}
                 setSlices={setSlices}
                 audioBuffer={audioBuffer}
+                playingSliceId={playingSliceId}
+                setPlayingSliceId={setPlayingSliceId}
               />
             </div>
           </div>

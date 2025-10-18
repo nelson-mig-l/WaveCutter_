@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef } from "react";
 import type { Slice } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Download, GripVertical, Trash2 } from "lucide-react";
-import { bufferToWav } from "@/lib/audio-utils";
+import { Download, GripVertical, Pause, Play, Trash2 } from "lucide-react";
+import { bufferToWav, playAudio, stopAudio } from "@/lib/audio-utils";
 import { Input } from "../ui/input";
-import { cn } from "@/lib/utils";
 import { ScrollArea } from "../ui/scroll-area";
 import {
   AlertDialog,
@@ -24,12 +23,16 @@ interface SliceListProps {
   slices: Slice[];
   setSlices: React.Dispatch<React.SetStateAction<Slice[]>>;
   audioBuffer: AudioBuffer;
+  playingSliceId: string | null;
+  setPlayingSliceId: (id: string | null) => void;
 }
 
 const SliceList: React.FC<SliceListProps> = ({
   slices,
   setSlices,
   audioBuffer,
+  playingSliceId,
+  setPlayingSliceId
 }) => {
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
@@ -93,6 +96,18 @@ const SliceList: React.FC<SliceListProps> = ({
     URL.revokeObjectURL(url);
   };
   
+  const handlePlayToggle = (slice: Slice) => {
+    if (playingSliceId === slice.id) {
+      stopAudio();
+      setPlayingSliceId(null);
+    } else {
+      const startInSeconds = slice.start / audioBuffer.sampleRate;
+      const durationInSeconds = (slice.end - slice.start) / audioBuffer.sampleRate;
+      playAudio(audioBuffer, startInSeconds, durationInSeconds, () => setPlayingSliceId(null));
+      setPlayingSliceId(slice.id);
+    }
+  };
+
   if (slices.length === 0) {
       return <div className="flex-grow flex items-center justify-center text-center text-foreground/50">
         <p>No slices created yet.<br/>Use Auto-Slice or select a region on the waveform.</p>
@@ -120,6 +135,9 @@ const SliceList: React.FC<SliceListProps> = ({
               onChange={(e) => handleNameChange(slice.id, e.target.value)}
               className="bg-transparent border-0 focus-visible:ring-1 focus-visible:ring-ring text-base"
             />
+            <Button variant="ghost" size="icon" onClick={() => handlePlayToggle(slice)}>
+              {playingSliceId === slice.id ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            </Button>
             <Button variant="ghost" size="icon" onClick={() => handleDownload(slice)}>
               <Download className="h-4 w-4" />
             </Button>

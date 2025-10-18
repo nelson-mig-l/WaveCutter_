@@ -3,19 +3,24 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import type { Slice } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Scissors } from "lucide-react";
+import { Scissors, Play, Pause } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { playAudio, stopAudio } from "@/lib/audio-utils";
 
 interface WaveformDisplayProps {
   audioBuffer: AudioBuffer;
   slices: Slice[];
   onSlice: (start: number, end: number) => void;
+  playingSliceId: string | null;
+  setPlayingSliceId: (id: string | null) => void;
 }
 
 const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   audioBuffer,
   slices,
   onSlice,
+  playingSliceId,
+  setPlayingSliceId
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
@@ -24,8 +29,8 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
-    const audioData = audioBuffer.getChannelData(0);
     if (!canvas) return;
+    const audioData = audioBuffer.getChannelData(0);
 
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
@@ -42,21 +47,27 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     ctx.clearRect(0, 0, width, height);
 
+    // Draw full sample playback indicator
+    if (playingSliceId === 'full_sample') {
+        ctx.fillStyle = "hsla(var(--primary), 0.1)";
+        ctx.fillRect(0, 0, width, height);
+    }
+    
     // Draw selection
     if (selection) {
-      ctx.fillStyle = "hsla(var(--primary), 0.2)";
+      ctx.fillStyle = playingSliceId === 'selection' ? "hsla(var(--primary), 0.3)" : "hsla(var(--primary), 0.2)";
       const startX = selection.start * width;
       const endX = selection.end * width;
       ctx.fillRect(startX, 0, endX - startX, height);
     }
 
     // Draw slices
-    ctx.fillStyle = "hsla(var(--primary), 0.1)";
     ctx.strokeStyle = "hsl(var(--primary))";
     ctx.lineWidth = 1;
     slices.forEach((slice) => {
       const startX = (slice.start / audioBuffer.length) * width;
       const endX = (slice.end / audioBuffer.length) * width;
+      ctx.fillStyle = playingSliceId === slice.id ? "hsla(var(--primary), 0.2)" : "hsla(var(--primary), 0.1)";
       ctx.fillRect(startX, 0, endX - startX, height);
       ctx.strokeRect(startX, 0, endX - startX, height);
     });
@@ -81,7 +92,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     }
     ctx.stroke();
 
-  }, [audioBuffer, slices, selection]);
+  }, [audioBuffer, slices, selection, playingSliceId]);
 
   useEffect(() => {
     draw();
@@ -91,6 +102,8 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     setIsSelecting(true);
+    stopAudio();
+    setPlayingSliceId(null);
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const start = x / rect.width;
@@ -122,6 +135,19 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     }
   }
 
+  const handlePlaySelection = () => {
+    if (!selection) return;
+    if (playingSliceId === 'selection') {
+      stopAudio();
+      setPlayingSliceId(null);
+    } else {
+      const start = selection.start * audioBuffer.duration;
+      const duration = (selection.end - selection.start) * audioBuffer.duration;
+      playAudio(audioBuffer, start, duration, () => setPlayingSliceId(null));
+      setPlayingSliceId('selection');
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4 flex-grow">
       <div className="flex-grow bg-background relative" style={{ minHeight: '200px' }}>
@@ -135,10 +161,14 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         />
       </div>
       {selection && (
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+               <Button onClick={handlePlaySelection} variant="outline">
+                  {playingSliceId === 'selection' ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
+                  Play Selection
+              </Button>
               <Button onClick={handleCreateSlice}>
                   <Scissors className="mr-2 h-4 w-4" />
-                  Create Slice From Selection
+                  Create Slice
               </Button>
           </div>
       )}

@@ -148,3 +148,40 @@ export function concatenateAudioBuffers(originalBuffer: AudioBuffer, slices: Sli
     audioContext.close();
     return newBuffer;
 }
+
+// --- Audio Player ---
+let audioContext: AudioContext | null = null;
+let source: AudioBufferSourceNode | null = null;
+
+function getAudioContext() {
+  if (!audioContext || audioContext.state === 'closed') {
+    audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+  return audioContext;
+}
+
+export function playAudio(
+  buffer: AudioBuffer,
+  start: number = 0, // in seconds
+  duration?: number, // in seconds
+  onEnded?: () => void
+) {
+  stopAudio();
+  const context = getAudioContext();
+  source = context.createBufferSource();
+  source.buffer = buffer;
+  source.connect(context.destination);
+  source.onended = () => {
+    onEnded?.();
+    source = null;
+  };
+  source.start(0, start, duration);
+}
+
+export function stopAudio() {
+  if (source) {
+    source.stop();
+    source.disconnect();
+    source = null;
+  }
+}
