@@ -2,20 +2,16 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Zap, Trash2 } from "lucide-react";
+import { Zap } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 
 interface SliceControlsProps {
   onAutoSlice: (threshold: number) => void;
-  onClearSlices: () => void;
-  hasSlices: boolean;
 }
 
 const SliceControls: React.FC<SliceControlsProps> = ({
   onAutoSlice,
-  onClearSlices,
-  hasSlices,
 }) => {
   const [threshold, setThreshold] = useState(5);
 
@@ -40,14 +36,6 @@ const SliceControls: React.FC<SliceControlsProps> = ({
           <Zap className="mr-2 h-4 w-4" />
           Auto-Slice
         </Button>
-        {hasSlices && (
-          <>
-            <Button onClick={onClearSlices} variant="destructive">
-              <Trash2 className="mr-2 h-4 w-4" />
-              Clear Slices
-            </Button>
-          </>
-        )}
       </div>
     </div>
   );

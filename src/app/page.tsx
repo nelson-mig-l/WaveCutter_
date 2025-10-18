@@ -11,7 +11,7 @@ import SliceControls from "@/components/wave-cutter/slice-controls";
 import SliceList from "@/components/wave-cutter/slice-list";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Download, Music, Pause, Play } from "lucide-react";
+import { ArrowUp, Download, Music, Pause, Play, Trash2 } from "lucide-react";
 
 export default function Home() {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
@@ -158,6 +158,12 @@ export default function Home() {
     }
   };
 
+  const handleClearSlices = () => {
+    stopAudio();
+    setPlayingSliceId(null);
+    setSlices([]);
+  }
+
   return (
     <div className="min-h-screen container mx-auto p-4 md:p-8 flex flex-col gap-6">
       <Header />
@@ -196,12 +202,6 @@ export default function Home() {
               />
               <SliceControls
                 onAutoSlice={handleAutoSlice}
-                onClearSlices={() => {
-                  stopAudio();
-                  setPlayingSliceId(null);
-                  setSlices([]);
-                }}
-                hasSlices={slices.length > 0}
               />
             </div>
             <div className="border border-primary/50 p-4 flex flex-col gap-4">
@@ -210,7 +210,7 @@ export default function Home() {
                   <ArrowUp className="transform rotate-45" /> Slices
                 </h2>
                 {slices.length > 0 && (
-                   <div className="flex gap-2">
+                   <div className="flex gap-2 flex-wrap">
                       <Button onClick={handlePlayAll} variant="outline" size="sm">
                         {playingSliceId === 'all' ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
                         Play All
@@ -218,6 +218,10 @@ export default function Home() {
                       <Button onClick={handleDownloadAll} size="sm">
                         <Download className="mr-2 h-4 w-4" />
                         Download
+                      </Button>
+                      <Button onClick={handleClearSlices} variant="destructive" size="sm">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Clear All
                       </Button>
                    </div>
                 )}
