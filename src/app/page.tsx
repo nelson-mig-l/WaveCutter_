@@ -112,8 +112,32 @@ export default function Home() {
       stopAudio();
       setPlayingSliceId(null);
     } else {
+      stopAudio();
       playAudio(audioBuffer, 0, undefined, () => setPlayingSliceId(null));
       setPlayingSliceId('full_sample');
+    }
+  };
+
+  const handlePlayAll = () => {
+    if (!audioBuffer || slices.length === 0) return;
+
+    if (playingSliceId === 'all') {
+      stopAudio();
+      setPlayingSliceId(null);
+    } else {
+      stopAudio();
+      try {
+        const concatenatedBuffer = concatenateAudioBuffers(audioBuffer, slices);
+        playAudio(concatenatedBuffer, 0, undefined, () => setPlayingSliceId(null));
+        setPlayingSliceId('all');
+      } catch (e) {
+        const error = e as Error;
+        toast({
+          variant: "destructive",
+          title: "Playback failed",
+          description: error.message,
+        });
+      }
     }
   };
 
@@ -159,6 +183,8 @@ export default function Home() {
                   setSlices([]);
                 }}
                 onDownloadAll={handleDownloadAll}
+                onPlayAll={handlePlayAll}
+                isPlayingAll={playingSliceId === 'all'}
                 hasSlices={slices.length > 0}
               />
             </div>
