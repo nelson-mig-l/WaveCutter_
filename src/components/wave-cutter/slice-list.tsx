@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef } from "react";
 import type { Slice } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Download, GripVertical, Pause, Play, Trash2 } from "lucide-react";
@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Label } from "../ui/label";
 
 interface SliceListProps {
   slices: Slice[];
@@ -83,6 +84,25 @@ const SliceList: React.FC<SliceListProps> = ({
       )
     );
   };
+  
+  const handleTimeChange = (id: string, type: 'start' | 'end', value: string) => {
+    const timeInSeconds = parseFloat(value);
+    if (isNaN(timeInSeconds)) return;
+
+    const sampleValue = Math.floor(timeInSeconds * audioBuffer.sampleRate);
+
+    setSlices(slices.map(slice => {
+        if (slice.id === id) {
+            if (type === 'start' && sampleValue < slice.end) {
+                return { ...slice, start: sampleValue };
+            }
+            if (type === 'end' && sampleValue > slice.start) {
+                return { ...slice, end: sampleValue };
+            }
+        }
+        return slice;
+    }).sort((a,b) => a.start - b.start));
+  };
 
   const handleDownload = (slice: Slice) => {
     const sliceBuffer = audioBuffer.getChannelData(0).slice(slice.start, slice.end);
@@ -128,11 +148,11 @@ const SliceList: React.FC<SliceListProps> = ({
 
   return (
     <ScrollArea className="flex-grow">
-      <div className="flex flex-col gap-2 pr-4">
+      <div className="flex flex-col gap-4 pr-4">
         {slices.map((slice, index) => (
           <div
             key={slice.id}
-            className="flex items-center gap-2 border border-primary/30 p-2 transition-all relative"
+            className="flex items-center gap-2 border border-primary/30 p-2 transition-all relative group"
             draggable
             onDragStart={(e) => handleDragStart(e, index)}
             onDragEnter={(e) => handleDragEnter(e, index)}
@@ -141,47 +161,73 @@ const SliceList: React.FC<SliceListProps> = ({
             onDrop={handleDrop}
             onDragEnd={handleDragEnd}
           >
-            {playingSliceId === slice.id && playbackProgress !== null && (
-              <div
+            <div
                 className="absolute top-0 left-0 h-full bg-primary/20 pointer-events-none"
                 style={{
-                  width: `${((playbackProgress * audioBuffer.duration - (slice.start / audioBuffer.sampleRate)) / ((slice.end - slice.start) / audioBuffer.sampleRate)) * 100}%`
+                  width: (playingSliceId === slice.id && playbackProgress !== null) ? `${((playbackProgress * audioBuffer.duration - (slice.start / audioBuffer.sampleRate)) / ((slice.end - slice.start) / audioBuffer.sampleRate)) * 100}%` : '0%'
                 }}
-              />
-            )}
-            <GripVertical className="cursor-grab text-primary/50" />
-            <Input
-              value={slice.name}
-              onChange={(e) => handleNameChange(slice.id, e.target.value)}
-              className="bg-transparent border-0 focus-visible:ring-1 focus-visible:ring-ring text-base z-10"
             />
-            <Button variant="ghost" size="icon" onClick={() => handlePlayToggle(slice)} className="z-10">
-              {playingSliceId === slice.id ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleDownload(slice)} className="z-10">
-              <Download className="h-4 w-4" />
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/20 z-10">
-                    <Trash2 className="h-4 w-4" />
+            <GripVertical className="cursor-grab text-primary/50 shrink-0" />
+            <div className="flex-grow flex flex-col gap-2">
+                <Input
+                value={slice.name}
+                onChange={(e) => handleNameChange(slice.id, e.target.value)}
+                className="bg-transparent border-0 focus-visible:ring-1 focus-visible:ring-ring text-base z-10 h-auto p-0"
+                />
+                <div className="flex gap-2 items-center">
+                    <div className="flex flex-col gap-1 text-xs">
+                        <Label htmlFor={`start-${slice.id}`}>Start</Label>
+                        <Input 
+                            id={`start-${slice.id}`}
+                            type="number"
+                            step="0.01"
+                            value={(slice.start / audioBuffer.sampleRate).toFixed(3)}
+                            onChange={(e) => handleTimeChange(slice.id, 'start', e.target.value)}
+                            className="bg-card h-8 w-24 text-xs z-10"
+                        />
+                    </div>
+                     <div className="flex flex-col gap-1 text-xs">
+                        <Label htmlFor={`end-${slice.id}`}>End</Label>
+                        <Input 
+                             id={`end-${slice.id}`}
+                            type="number"
+                            step="0.01"
+                            value={(slice.end / audioBuffer.sampleRate).toFixed(3)}
+                            onChange={(e) => handleTimeChange(slice.id, 'end', e.target.value)}
+                            className="bg-card h-8 w-24 text-xs z-10"
+                        />
+                    </div>
+                </div>
+            </div>
+            <div className="flex flex-col gap-1 shrink-0">
+                <Button variant="ghost" size="icon" onClick={() => handlePlayToggle(slice)} className="z-10 h-8 w-8">
+                {playingSliceId === slice.id ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                 </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently delete the slice "{slice.name}". This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => handleDelete(slice.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                <Button variant="ghost" size="icon" onClick={() => handleDownload(slice)} className="z-10 h-8 w-8">
+                <Download className="h-4 w-4" />
+                </Button>
+                <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/20 z-10 h-8 w-8">
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete the slice "{slice.name}". This action cannot be undone.
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => handleDelete(slice.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        Delete
+                    </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+                </AlertDialog>
+            </div>
           </div>
         ))}
       </div>
