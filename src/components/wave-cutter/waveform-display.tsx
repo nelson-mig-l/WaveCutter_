@@ -55,9 +55,12 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     
     // Draw selection
     if (selection) {
-      ctx.fillStyle = playingSliceId === 'selection' ? "hsla(var(--primary), 0.3)" : "hsla(var(--primary), 0.2)";
+      ctx.strokeStyle = "hsl(var(--primary))";
+      ctx.lineWidth = 2;
+      ctx.fillStyle = playingSliceId === 'selection' ? "hsla(var(--primary), 0.2)" : "hsla(var(--primary), 0.1)";
       const startX = selection.start * width;
       const endX = selection.end * width;
+      ctx.strokeRect(startX, 0, endX - startX, height);
       ctx.fillRect(startX, 0, endX - startX, height);
     }
 
@@ -67,8 +70,10 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     slices.forEach((slice) => {
       const startX = (slice.start / audioBuffer.length) * width;
       const endX = (slice.end / audioBuffer.length) * width;
-      ctx.fillStyle = playingSliceId === slice.id ? "hsla(var(--primary), 0.2)" : "hsla(var(--primary), 0.1)";
-      ctx.fillRect(startX, 0, endX - startX, height);
+      if (playingSliceId === slice.id) {
+          ctx.fillStyle = "hsla(var(--primary), 0.2)";
+          ctx.fillRect(startX, 0, endX - startX, height);
+      }
       ctx.strokeRect(startX, 0, endX - startX, height);
     });
 
