@@ -17,7 +17,7 @@ export function findPeaks(
   const audioData = audioBuffer.getChannelData(0);
   const sampleRate = audioBuffer.sampleRate;
   const minSilenceSamples = minSilenceDuration * sampleRate;
-  const minSliceSamples = minSliceDuration * sampleRate;
+  const minSliceSamples = minSliceDuration * samplerate;
 
   let slices: { start: number; end: number }[] = [];
   let inSlice = false;
@@ -155,12 +155,31 @@ let source: AudioBufferSourceNode | null = null;
 let animationFrameId: number | null = null;
 let playbackStartTime = 0;
 let playbackStartOffset = 0;
+let onProgressGlobal: ((progress: number) => void) | null = null;
 
 function getAudioContext() {
   if (!audioContext || audioContext.state === 'closed') {
     audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
   }
   return audioContext;
+}
+
+function progressLoop() {
+  if (source && audioContext && onProgressGlobal) {
+    const elapsedTime = audioContext.currentTime - playbackStartTime;
+    const totalDuration = source.buffer!.duration;
+    let currentPosition = playbackStartOffset + elapsedTime;
+    
+    if (source.loop) {
+        const loopDuration = source.loopEnd - source.loopStart;
+        if(loopDuration > 0) {
+            currentPosition = source.loopStart + ((elapsedTime) % loopDuration);
+        }
+    }
+
+    onProgressGlobal(currentPosition / totalDuration);
+    animationFrameId = requestAnimationFrame(progressLoop);
+  }
 }
 
 export function playAudio(
@@ -195,20 +214,9 @@ export function playAudio(
   
   source.start(0, start, loop ? undefined : duration);
   playbackStartTime = context.currentTime;
+  onProgressGlobal = onProgress || null;
   
-  if (onProgress) {
-    const progressLoop = () => {
-      if (source) {
-        const elapsedTime = context.currentTime - playbackStartTime;
-        let currentProgress = (elapsedTime / totalDuration) % 1;
-        if(loop) {
-            onProgress(playbackStartOffset/buffer.duration + currentProgress * (totalDuration/buffer.duration));
-        } else {
-            onProgress( (playbackStartOffset + elapsedTime) / buffer.duration);
-        }
-        animationFrameId = requestAnimationFrame(progressLoop);
-      }
-    };
+  if (onProgressGlobal) {
     animationFrameId = requestAnimationFrame(progressLoop);
   }
 }
@@ -220,8 +228,13 @@ export function stopAudio() {
   }
   if (source) {
     source.onended = null;
-    source.stop();
+    try {
+        source.stop();
+    } catch(e) {
+        // already stopped
+    }
     source.disconnect();
     source = null;
   }
+  onProgressGlobal = null;
 }

@@ -143,9 +143,7 @@ export default function Home() {
           false,
           () => setPlayingSliceId(null),
           (progress) => {
-            // This progress is for the concatenated buffer, not the main one.
-            // We'd need more complex logic to map it back, so we'll ignore it for now.
-            // Or, we could play slices sequentially. For now, no progress on play all.
+             setPlaybackProgress(progress);
           }
         );
         setPlayingSliceId('all');
@@ -193,6 +191,8 @@ export default function Home() {
                 onSlice={handleManualSlice}
                 playingSliceId={playingSliceId}
                 setPlayingSliceId={setPlayingSliceId}
+                playbackProgress={playbackProgress}
+                setPlaybackProgress={setPlaybackProgress}
               />
               <SliceControls
                 onAutoSlice={handleAutoSlice}
@@ -217,6 +217,8 @@ export default function Home() {
                 audioBuffer={audioBuffer}
                 playingSliceId={playingSliceId}
                 setPlayingSliceId={setPlayingSliceId}
+                playbackProgress={playbackProgress}
+                setPlaybackProgress={setPlaybackProgress}
               />
             </div>
           </div>

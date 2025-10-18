@@ -25,6 +25,8 @@ interface SliceListProps {
   audioBuffer: AudioBuffer;
   playingSliceId: string | null;
   setPlayingSliceId: (id: string | null) => void;
+  playbackProgress: number | null;
+  setPlaybackProgress: (progress: number | null) => void;
 }
 
 const SliceList: React.FC<SliceListProps> = ({
@@ -32,11 +34,12 @@ const SliceList: React.FC<SliceListProps> = ({
   setSlices,
   audioBuffer,
   playingSliceId,
-  setPlayingSliceId
+  setPlayingSliceId,
+  playbackProgress,
+  setPlaybackProgress
 }) => {
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
-  const [playbackProgress, setPlaybackProgress] = useState(0);
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
     dragItem.current = index;
@@ -138,7 +141,7 @@ const SliceList: React.FC<SliceListProps> = ({
             onDrop={handleDrop}
             onDragEnd={handleDragEnd}
           >
-            {playingSliceId === slice.id && (
+            {playingSliceId === slice.id && playbackProgress !== null && (
               <div
                 className="absolute top-0 left-0 h-full bg-primary/20 pointer-events-none"
                 style={{

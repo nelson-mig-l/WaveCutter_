@@ -13,6 +13,8 @@ interface WaveformDisplayProps {
   onSlice: (start: number, end: number) => void;
   playingSliceId: string | null;
   setPlayingSliceId: (id: string | null) => void;
+  playbackProgress: number | null;
+  setPlaybackProgress: (progress: number | null) => void;
 }
 
 const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
@@ -20,13 +22,14 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   slices,
   onSlice,
   playingSliceId,
-  setPlayingSliceId
+  setPlayingSliceId,
+  playbackProgress,
+  setPlaybackProgress,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [isLooping, setIsLooping] = useState(false);
-  const [playbackProgress, setPlaybackProgress] = useState<number | null>(null);
   const { toast } = useToast();
 
   const draw = useCallback(() => {
@@ -57,6 +60,9 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       const startX = selection.start * width;
       const endX = selection.end * width;
       ctx.fillRect(startX, 0, endX - startX, height);
+      ctx.strokeStyle = "hsl(var(--primary))";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(startX, 0, endX - startX, height);
     }
 
     // Draw slices
@@ -111,12 +117,13 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [draw]);
-
+  
   useEffect(() => {
     if(!playingSliceId) {
-        setPlaybackProgress(null);
+      setPlaybackProgress(null);
     }
-  }, [playingSliceId]);
+  }, [playingSliceId, setPlaybackProgress]);
+
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     setIsSelecting(true);
@@ -167,6 +174,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       setPlayingSliceId(null);
       setIsLooping(false);
     } else {
+      stopAudio(); // Stop any previous playback
       const start = selection.start * audioBuffer.duration;
       const duration = (selection.end - selection.start) * audioBuffer.duration;
       playAudio(
@@ -203,7 +211,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                   {playingSliceId === 'selection' && !isLooping ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
                   Play Selection
               </Button>
-              <Button onClick={() => handlePlaySelection(true)} variant={isLooping ? "default" : "outline"}>
+              <Button onClick={() => handlePlaySelection(true)} variant={playingSliceId === 'selection_loop' ? "default" : "outline"}>
                   <Repeat className="mr-2 h-4 w-4" />
                   Loop
               </Button>
