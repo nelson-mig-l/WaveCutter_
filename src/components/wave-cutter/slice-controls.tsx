@@ -25,7 +25,7 @@ const SliceControls: React.FC<SliceControlsProps> = ({
         <Slider
           id="threshold"
           min={1}
-          max={50}
+          max={95}
           step={1}
           value={[threshold]}
           onValueChange={(value) => setThreshold(value[0])}

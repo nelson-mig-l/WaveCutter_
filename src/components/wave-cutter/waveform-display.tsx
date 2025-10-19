@@ -131,7 +131,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
   useEffect(() => {
     draw();
-  }, [draw]);
+  }, [draw, pan]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -201,20 +201,20 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       setIsLooping(false);
     } else {
       stopAudio();
-      const start = selection.start * audioBuffer.duration;
-      const duration = (selection.end - selection.start) * audioBuffer.duration;
+      const startInSeconds = selection.start * audioBuffer.duration;
+      const durationInSeconds = (selection.end - selection.start) * audioBuffer.duration;
 
       playAudio(
         audioBuffer,
-        start,
-        duration,
+        startInSeconds,
+        durationInSeconds,
         loop,
         () => {
           setPlayingSliceId(null);
           setIsLooping(false);
         },
-        (progress) => {
-            const overallProgress = (start + progress * duration) / audioBuffer.duration;
+        (progressInSegment) => {
+            const overallProgress = (startInSeconds + progressInSegment) / audioBuffer.duration;
             setPlaybackProgress(overallProgress);
         }
       );
@@ -236,17 +236,18 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     const scrollLeft = containerRef.current.scrollLeft;
     const scrollWidth = containerRef.current.scrollWidth;
     
-    // The point on the full-width canvas we are zooming into
     const zoomTargetX = scrollLeft + mouseX;
     
     setZoom(newZoom);
 
-    // After state update, adjust scroll position to keep the pointer at the same location
     requestAnimationFrame(() => {
       if(containerRef.current) {
         const newScrollWidth = containerRef.current.scrollWidth;
         const newScrollLeft = (zoomTargetX / scrollWidth) * newScrollWidth - mouseX;
         containerRef.current.scrollLeft = newScrollLeft;
+        // Trigger pan update after scroll position is set
+        const maxScroll = newScrollWidth - containerRef.current.clientWidth;
+        setPan(maxScroll > 0 ? newScrollLeft / maxScroll : 0);
       }
     });
   };
