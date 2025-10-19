@@ -5,8 +5,8 @@ const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1] || 'WaveCutter_';
 const nextConfig: NextConfig = {
   /* config options here */
   output: 'export',
-  assetPrefix: process.env.NODE_ENV === 'production' ? `./${repoName}` : '',
-  basePath: process.env.NODE_ENV === 'production' ? `./${repoName}` : '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? `/${repoName}` : '',
+  basePath: process.env.NODE_ENV === 'production' ? `/${repoName}` : '',
   typescript: {
     ignoreBuildErrors: true,
   },
