@@ -14,9 +14,9 @@ interface AudioUploaderProps {
 }
 
 const sampleFiles = [
-    { name: "Amen Break", path: "/audio/amen-break.wav" },
-    { name: "Think Break", path: "/audio/think-break.wav" },
-    { name: "Funky Drummer", path: "/audio/funky-drummer.wav" },
+    { name: "Amen Break", path: "./audio/amen-break.wav" },
+    { name: "Think Break", path: "./audio/think-break.wav" },
+    { name: "Funky Drummer", path: "./audio/funky-drummer.wav" },
 ];
 
 const AudioUploader: React.FC<AudioUploaderProps> = ({
