@@ -5,6 +5,7 @@ import { Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSampleAudio } from "@/hooks/use-sample-audio";
 import { Button } from "../ui/button";
+import nextConfig from "../../../next.config";
 
 interface AudioUploaderProps {
   onFileLoaded: (buffer: AudioBuffer, fileName: string) => void;
@@ -14,9 +15,18 @@ interface AudioUploaderProps {
 }
 
 const sampleFiles = [
-    { name: "Amen Break", path: "./audio/amen-break.wav" },
-    { name: "Think Break", path: "./audio/think-break.wav" },
-    { name: "Funky Drummer", path: "./audio/funky-drummer.wav" },
+    {
+      name: "Amen Break",
+      path: nextConfig.assetPrefix + "./audio/amen-break.wav"
+    },
+    {
+      name: "Think Break",
+      path: nextConfig.assetPrefix + "./audio/think-break.wav"
+    },
+    {
+      name: "Funky Drummer",
+      path: nextConfig.assetPrefix + "./audio/funky-drummer.wav"
+    },
 ];
 
 const AudioUploader: React.FC<AudioUploaderProps> = ({
