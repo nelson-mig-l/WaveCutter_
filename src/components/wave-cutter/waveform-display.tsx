@@ -32,6 +32,12 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   const [isLooping, setIsLooping] = useState(false);
   const { toast } = useToast();
 
+
+  const computedStyle = getComputedStyle(document.documentElement);
+  const primaryColor = `hsl(${computedStyle.getPropertyValue('--primary').trim()})`;
+  const destructiveColor = `hsl(${computedStyle.getPropertyValue('--destructive').trim()})`;
+  const accentColor = `hsl(${computedStyle.getPropertyValue('--accent').trim()})`;
+
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -60,7 +66,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       const startX = selection.start * width;
       const endX = selection.end * width;
       ctx.fillRect(startX, 0, endX - startX, height);
-      ctx.strokeStyle = 'hsl(var(--primary))';
+      ctx.strokeStyle = accentColor;
       ctx.lineWidth = 1;
       ctx.strokeRect(startX, 0, endX - startX, height);
     }
@@ -80,7 +86,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     // Draw waveform
     ctx.lineWidth = 2;
-    ctx.strokeStyle = 'hsl(var(--primary))';
+    ctx.strokeStyle = primaryColor;
     ctx.beginPath();
     ctx.moveTo(0, middle);
 
@@ -100,7 +106,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     // Draw playback cursor
     if (playbackProgress !== null && playingSliceId) {
-        ctx.strokeStyle = 'hsl(var(--destructive))';
+        ctx.strokeStyle = destructiveColor;
         ctx.lineWidth = 1;
         const x = playbackProgress * width;
         ctx.beginPath();
