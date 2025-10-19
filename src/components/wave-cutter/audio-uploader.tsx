@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback } from "react";
 import { Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSampleAudio } from "@/hooks/use-sample-audio";
@@ -26,6 +26,49 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({
   setIsLoading,
 }) => {
   const { loadSample } = useSampleAudio({ onFileLoaded, onError, setIsLoading });
+
+  const handleFileChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      if (!file.name.toLowerCase().endsWith(".wav")) {
+        onError("Invalid file type. Please upload a .WAV file.");
+        return;
+      }
+
+      setIsLoading(true);
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        const arrayBuffer = e.target?.result as ArrayBuffer;
+        if (!arrayBuffer) {
+          onError("Could not read file buffer.");
+          return;
+        }
+
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioContext.decodeAudioData(
+          arrayBuffer,
+          (buffer) => {
+            onFileLoaded(buffer, file.name);
+            audioContext.close();
+          },
+          (err) => {
+            onError(`Error decoding audio data: ${(err as DOMException).message}`);
+            audioContext.close();
+          }
+        );
+      };
+
+      reader.onerror = () => {
+        onError("Error reading the file.");
+      };
+
+      reader.readAsArrayBuffer(file);
+    },
+    [onFileLoaded, onError, setIsLoading]
+  );
 
   return (
     <div className="flex-grow flex flex-col items-center justify-center text-center p-8">
@@ -53,15 +96,23 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({
             </div>
             
             <div className="text-foreground/50">-- OR --</div>
-
-            <label
-                htmlFor="audio-upload-fallback"
-                className={cn(
-                "cursor-pointer border-2 border-dashed border-primary/50 p-8 transition-colors duration-300 w-full max-w-lg text-center hover:border-primary hover:bg-accent"
-                )}
-            >
-                [ CLICK HERE TO UPLOAD A .WAV FILE ]
-            </label>
+            <div>
+              <label
+                  htmlFor="audio-upload"
+                  className={cn(
+                  "cursor-pointer border-2 border-dashed border-primary/50 p-8 transition-colors duration-300 w-full max-w-lg text-center hover:border-primary hover:bg-accent block"
+                  )}
+              >
+                  [ CLICK HERE TO UPLOAD A .WAV FILE ]
+              </label>
+              <input
+                  type="file"
+                  id="audio-upload"
+                  accept=".wav"
+                  onChange={handleFileChange}
+                  className="hidden"
+              />
+            </div>
 
         </div>
       )}
