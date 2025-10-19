@@ -172,7 +172,7 @@ const SliceList: React.FC<SliceListProps> = ({
   }
 
   return (
-    <ScrollArea className="flex-grow">
+    <ScrollArea className="flex-grow h-[300px] lg:h-auto">
       <div className="flex flex-col gap-2 pr-4">
         {slices.map((slice, index) => (
           <div
