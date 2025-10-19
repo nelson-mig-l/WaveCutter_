@@ -17,15 +17,15 @@ interface AudioUploaderProps {
 const sampleFiles = [
     {
       name: "Amen Break",
-      path: nextConfig.assetPrefix + "./audio/amen-break.wav"
+      path: nextConfig.assetPrefix + "/audio/amen-break.wav"
     },
     {
       name: "Think Break",
-      path: nextConfig.assetPrefix + "./audio/think-break.wav"
+      path: nextConfig.assetPrefix + "/audio/think-break.wav"
     },
     {
       name: "Funky Drummer",
-      path: nextConfig.assetPrefix + "./audio/funky-drummer.wav"
+      path: nextConfig.assetPrefix + "/audio/funky-drummer.wav"
     },
 ];
 
