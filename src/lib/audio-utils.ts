@@ -11,44 +11,42 @@ import type { Slice } from "./types";
 export function findPeaks(
   audioBuffer: AudioBuffer,
   threshold: number,
-  minSilenceDuration: number,
+  _minSilenceDuration: number, // No longer used, but kept for signature compatibility
   minSliceDuration: number
 ): Slice[] {
   const audioData = audioBuffer.getChannelData(0);
   const sampleRate = audioBuffer.sampleRate;
-  const minSilenceSamples = minSilenceDuration * sampleRate;
   const minSliceSamples = minSliceDuration * sampleRate;
 
   let slices: { start: number; end: number }[] = [];
-  let inSlice = false;
-  let sliceStart = 0;
+  let lastSliceEnd = 0;
 
-  for (let i = 0; i < audioData.length; i++) {
-    if (!inSlice && Math.abs(audioData[i]) > threshold) {
-      inSlice = true;
-      sliceStart = i;
-    } else if (inSlice && Math.abs(audioData[i]) < threshold) {
-      let silenceCounter = 0;
-      for (let j = i; j < audioData.length; j++) {
-        if (Math.abs(audioData[j]) < threshold) {
-          silenceCounter++;
-        } else {
-          break;
-        }
-      }
-      if (silenceCounter >= minSilenceSamples) {
-        if (i - sliceStart > minSliceSamples) {
-          slices.push({ start: sliceStart, end: i });
-        }
-        inSlice = false;
-        i += silenceCounter;
+  for (let i = 1; i < audioData.length; i++) {
+    // Detect a transient: silence followed by sound
+    if (Math.abs(audioData[i]) > threshold && Math.abs(audioData[i-1]) <= threshold) {
+      const sliceStart = lastSliceEnd;
+      const sliceEnd = i;
+
+      if (sliceEnd - sliceStart >= minSliceSamples) {
+        slices.push({ start: sliceStart, end: sliceEnd });
+        lastSliceEnd = sliceEnd;
       }
     }
   }
 
-  if (inSlice && audioData.length - sliceStart > minSliceSamples) {
-    slices.push({ start: sliceStart, end: audioData.length });
+  // Add the final remaining part of the audio as the last slice
+  if (lastSliceEnd < audioData.length && audioData.length - lastSliceEnd >= minSliceSamples) {
+    slices.push({ start: lastSliceEnd, end: audioData.length });
+  } else if (slices.length > 0) {
+    // If the remainder is too small, append it to the last slice
+    slices[slices.length - 1].end = audioData.length;
   }
+
+  // If no slices were created (e.g. continuous sound), create one slice for the whole buffer
+  if (slices.length === 0 && audioData.length >= minSliceSamples) {
+      slices.push({ start: 0, end: audioData.length });
+  }
+
 
   return slices.map((s, i) => ({
     ...s,
@@ -56,6 +54,7 @@ export function findPeaks(
     name: `Slice ${i + 1}`,
   }));
 }
+
 
 /**
  * Encodes an AudioBuffer into a WAV file Blob.
