@@ -120,7 +120,7 @@ export default function Home() {
         undefined,
         false, 
         () => setPlayingSliceId(null),
-        (progress) => setPlaybackProgress(progress)
+        (progress) => setPlaybackProgress(progress / audioBuffer.duration)
       );
       setPlayingSliceId('full_sample');
     }
@@ -143,7 +143,9 @@ export default function Home() {
           false,
           () => setPlayingSliceId(null),
           (progress) => {
-             setPlaybackProgress(progress);
+             // This progress is tricky because buffer is concatenated.
+             // For now, let's just use it to show activity, but not accurate position
+             setPlaybackProgress(progress / concatenatedBuffer.duration);
           }
         );
         setPlayingSliceId('all');
@@ -242,3 +244,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

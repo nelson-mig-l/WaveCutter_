@@ -4,7 +4,7 @@ import type { Slice } from "./types";
  * Finds regions of sound in an AudioBuffer based on an amplitude threshold.
  * @param audioBuffer The AudioBuffer to analyze.
  * @param threshold The amplitude threshold to distinguish sound from silence (0-1).
- * @param minSilenceDuration Minimum duration of silence in seconds to treat as a separator.
+ * @param _minSilenceDuration Minimum duration of silence in seconds to treat as a separator.
  * @param minSliceDuration Minimum duration of a slice in seconds to be included.
  * @returns An array of Slice objects.
  */
@@ -153,8 +153,9 @@ let audioContext: AudioContext | null = null;
 let source: AudioBufferSourceNode | null = null;
 let animationFrameId: number | null = null;
 let playbackStartTime = 0;
-let playbackStartOffset = 0;
-let onProgressGlobal: ((progress: number) => void) | null = null;
+let playbackStartOffset = 0; // The progress into the full buffer where playback starts
+let onProgressGlobal: ((progressInSegment: number) => void) | null = null;
+let loopDuration = 0;
 
 function getAudioContext() {
   if (!audioContext || audioContext.state === 'closed') {
@@ -166,17 +167,13 @@ function getAudioContext() {
 function progressLoop() {
   if (source && audioContext && onProgressGlobal) {
     const elapsedTime = audioContext.currentTime - playbackStartTime;
-    const totalDuration = source.buffer!.duration;
-    let currentPosition = playbackStartOffset + elapsedTime;
-    
-    if (source.loop) {
-        const loopDuration = source.loopEnd - source.loopStart;
-        if(loopDuration > 0) {
-            currentPosition = source.loopStart + ((elapsedTime) % loopDuration);
-        }
+
+    let progressInSegment = elapsedTime;
+    if (source.loop && loopDuration > 0) {
+        progressInSegment = elapsedTime % loopDuration;
     }
 
-    onProgressGlobal(currentPosition / totalDuration);
+    onProgressGlobal(progressInSegment);
     animationFrameId = requestAnimationFrame(progressLoop);
   }
 }
@@ -187,7 +184,7 @@ export function playAudio(
   duration?: number, // in seconds
   loop: boolean = false,
   onEnded?: () => void,
-  onProgress?: (progress: number) => void
+  onProgress?: (progressInSegment: number) => void
 ) {
   stopAudio();
   const context = getAudioContext();
@@ -197,11 +194,12 @@ export function playAudio(
   source.loop = loop;
   
   playbackStartOffset = start;
-  const totalDuration = duration ?? (buffer.duration - start);
+  const playDuration = duration ?? (buffer.duration - start);
+  loopDuration = loop ? playDuration : 0;
 
   if(loop) {
     source.loopStart = start;
-    source.loopEnd = start + totalDuration;
+    source.loopEnd = start + playDuration;
   }
 
   source.onended = () => {
@@ -211,7 +209,7 @@ export function playAudio(
     }
   };
   
-  source.start(0, start, loop ? undefined : duration);
+  source.start(0, start, loop ? undefined : playDuration);
   playbackStartTime = context.currentTime;
   onProgressGlobal = onProgress || null;
   
@@ -237,3 +235,5 @@ export function stopAudio() {
   }
   onProgressGlobal = null;
 }
+
+    

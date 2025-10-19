@@ -158,7 +158,10 @@ const SliceList: React.FC<SliceListProps> = ({
                 setPlayingSliceId(null);
                 setLoopingSliceId(null);
             },
-            (progress) => setPlaybackProgress(progress)
+            (progressInSegment) => {
+                const overallProgress = (startInSeconds + progressInSegment) / audioBuffer.duration;
+                setPlaybackProgress(overallProgress);
+            }
         );
         setPlayingSliceId(slice.id);
         setLoopingSliceId(loop ? slice.id : null);
@@ -189,7 +192,7 @@ const SliceList: React.FC<SliceListProps> = ({
             <div
                 className="absolute top-0 left-0 h-full bg-primary/20 pointer-events-none"
                 style={{
-                  width: (playingSliceId === slice.id && playbackProgress !== null) ? `${((playbackProgress * audioBuffer.duration - (slice.start / audioBuffer.sampleRate)) / ((slice.end - slice.start) / audioBuffer.sampleRate)) * 100}%` : '0%'
+                  width: (playingSliceId === slice.id && playbackProgress !== null) ? `${(((playbackProgress * audioBuffer.duration - (slice.start / audioBuffer.sampleRate)) / ((slice.end - slice.start) / audioBuffer.sampleRate)) * 100)}%` : '0%'
                 }}
             />
             <GripVertical className="cursor-grab text-primary/50 shrink-0" />
@@ -264,3 +267,5 @@ const SliceList: React.FC<SliceListProps> = ({
 };
 
 export default SliceList;
+
+    
