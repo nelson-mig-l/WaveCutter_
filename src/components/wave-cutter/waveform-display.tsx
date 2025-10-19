@@ -223,48 +223,57 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     }
   };
 
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (!containerRef.current) return;
-
-    const zoomFactor = 1.1;
-    const newZoom = e.deltaY < 0 ? Math.min(zoom * zoomFactor, 100) : Math.max(zoom / zoomFactor, 1);
-
-    if (newZoom === zoom) return;
-
-    const mouseX = e.clientX - containerRef.current.getBoundingClientRect().left;
-    const scrollLeft = containerRef.current.scrollLeft;
-    const scrollWidth = containerRef.current.scrollWidth;
-    
-    const zoomTargetX = scrollLeft + mouseX;
-    
-    setZoom(newZoom);
-
-    requestAnimationFrame(() => {
-      if(containerRef.current) {
-        const newScrollWidth = containerRef.current.scrollWidth;
-        const newScrollLeft = (zoomTargetX / scrollWidth) * newScrollWidth - mouseX;
-        containerRef.current.scrollLeft = newScrollLeft;
-        // Trigger pan update after scroll position is set
-        const maxScroll = newScrollWidth - containerRef.current.clientWidth;
-        setPan(maxScroll > 0 ? newScrollLeft / maxScroll : 0);
-      }
-    });
-  };
-
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
     const { scrollLeft, scrollWidth, clientWidth } = e.currentTarget;
     const maxScroll = scrollWidth - clientWidth;
     setPan(maxScroll > 0 ? scrollLeft / maxScroll : 0);
   };
+  
+  const handleWheel = useCallback((e: WheelEvent) => {
+    e.preventDefault();
+    const container = containerRef.current;
+    if (!container) return;
+
+    const zoomFactor = 1.1;
+    const newZoom = e.deltaY < 0 ? Math.min(zoom * zoomFactor, 100) : Math.max(zoom / zoomFactor, 1);
+
+    if (newZoom === zoom) return;
+
+    const mouseX = e.clientX - container.getBoundingClientRect().left;
+    const scrollLeft = container.scrollLeft;
+    const scrollWidth = container.scrollWidth;
+    
+    const zoomTargetX = scrollLeft + mouseX;
+    
+    setZoom(newZoom);
+
+    requestAnimationFrame(() => {
+      const newScrollWidth = container.scrollWidth;
+      const newScrollLeft = (zoomTargetX / scrollWidth) * newScrollWidth - mouseX;
+      container.scrollLeft = newScrollLeft;
+      const maxScroll = newScrollWidth - container.clientWidth;
+      setPan(maxScroll > 0 ? newScrollLeft / maxScroll : 0);
+    });
+  }, [zoom, pan]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, [handleWheel]);
+
 
   return (
     <div className="flex flex-col gap-4">
       <div 
         ref={containerRef}
         className="relative h-[150px] overflow-x-auto"
-        onWheel={handleWheel}
         onScroll={handleScroll}
       >
         <canvas
