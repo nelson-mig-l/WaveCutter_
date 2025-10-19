@@ -4,7 +4,7 @@ Wave Cutter is a retro-themed, browser-based tool for visualizing, slicing, and 
 
 Whether you're a music producer looking to chop up breakbeats or just want to experiment with audio, Wave Cutter provides an intuitive interface for non-destructive audio editing right in your browser.
 
-![Wave Cutter Screenshot](https://raw.githubusercontent.com/google/studio-bots/main/apps/wave-cutter/screenshot.png)
+![Wave Cutter Screenshot](docs/wave-cutter.png)
 
 ## Features
 
