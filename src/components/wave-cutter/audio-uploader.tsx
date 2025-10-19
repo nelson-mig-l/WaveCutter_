@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useRef, useCallback } from "react";
+import React from "react";
 import { Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSampleAudio } from "@/hooks/use-sample-audio";
+import { Button } from "../ui/button";
 
 interface AudioUploaderProps {
   onFileLoaded: (buffer: AudioBuffer, fileName: string) => void;
@@ -11,57 +13,19 @@ interface AudioUploaderProps {
   setIsLoading: (loading: boolean) => void;
 }
 
+const sampleFiles = [
+    { name: "Amen Break", path: "/audio/amen-break.wav" },
+    { name: "Think Break", path: "/audio/think-break.wav" },
+    { name: "Funky Drummer", path: "/audio/funky-drummer.wav" },
+];
+
 const AudioUploader: React.FC<AudioUploaderProps> = ({
   onFileLoaded,
   onError,
   isLoading,
   setIsLoading,
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const dropzoneRef = useRef<HTMLLabelElement>(null);
-  
-  const handleFileChange = async (file: File | null) => {
-    if (!file) return;
-
-    if (!file.name.toLowerCase().endsWith(".wav")) {
-      onError("Invalid file type. Please upload a .WAV file.");
-      return;
-    }
-    
-    setIsLoading(true);
-
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const arrayBuffer = await file.arrayBuffer();
-      audioContext.decodeAudioData(
-        arrayBuffer,
-        (buffer) => {
-          onFileLoaded(buffer, file.name);
-          audioContext.close();
-        },
-        (error) => {
-          onError(`Error decoding audio data: ${error.message}`);
-          audioContext.close();
-        }
-      );
-    } catch (e) {
-      const error = e as Error;
-      onError(`Failed to process file: ${error.message}`);
-    }
-  };
-
-  const onDragEnter = useCallback(() => dropzoneRef.current?.classList.add('border-primary', 'bg-accent'), []);
-  const onDragLeave = useCallback(() => dropzoneRef.current?.classList.remove('border-primary', 'bg-accent'), []);
-  
-  const onDrop = useCallback((e: React.DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dropzoneRef.current?.classList.remove('border-primary', 'bg-accent');
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFileChange(e.dataTransfer.files[0]);
-      e.dataTransfer.clearData();
-    }
-  }, []);
+  const { loadSample } = useSampleAudio({ onFileLoaded, onError, setIsLoading });
 
   return (
     <div className="flex-grow flex flex-col items-center justify-center text-center p-8">
@@ -71,34 +35,34 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({
           <p className="text-2xl">LOADING AUDIO DATA...</p>
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-4">
-          <Upload className="w-24 h-24 text-primary/50" />
-          <h2 className="text-3xl">Awaiting Audio Input</h2>
-          <p className="text-foreground/70 max-w-md">
-            Upload a .WAV file to begin. Drag and drop a file onto this area or
-            click the button below.
-          </p>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={(e) => handleFileChange(e.target.files ? e.target.files[0] : null)}
-            accept=".wav"
-            className="hidden"
-            id="audio-upload"
-          />
-          <label
-            ref={dropzoneRef}
-            htmlFor="audio-upload"
-            onDragEnter={onDragEnter}
-            onDragLeave={onDragLeave}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={onDrop}
-            className={cn(
-              "mt-4 cursor-pointer border-2 border-dashed border-primary/50 p-8 transition-colors duration-300 w-full max-w-lg text-center hover:border-primary hover:bg-accent"
-            )}
-          >
-            [ CLICK OR DRAG .WAV FILE HERE ]
-          </label>
+        <div className="flex flex-col items-center gap-8">
+            <div className="flex flex-col items-center gap-4">
+                <Upload className="w-24 h-24 text-primary/50" />
+                <h2 className="text-3xl">Awaiting Audio Input</h2>
+                <p className="text-foreground/70 max-w-md">
+                    Choose a classic breakbeat or upload your own .WAV file to begin.
+                </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-2xl">
+                {sampleFiles.map((sample) => (
+                    <Button key={sample.name} variant="outline" size="lg" onClick={() => loadSample(sample.path, sample.name)}>
+                        {sample.name}
+                    </Button>
+                ))}
+            </div>
+            
+            <div className="text-foreground/50">-- OR --</div>
+
+            <label
+                htmlFor="audio-upload-fallback"
+                className={cn(
+                "cursor-pointer border-2 border-dashed border-primary/50 p-8 transition-colors duration-300 w-full max-w-lg text-center hover:border-primary hover:bg-accent"
+                )}
+            >
+                [ CLICK HERE TO UPLOAD A .WAV FILE ]
+            </label>
+
         </div>
       )}
     </div>
