@@ -169,6 +169,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         window.removeEventListener('resize', handleResize);
         container.removeEventListener('scroll', handleScroll);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draw, zoom]);
   
   useEffect(() => {
