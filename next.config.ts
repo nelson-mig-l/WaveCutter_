@@ -1,6 +1,6 @@
 import type {NextConfig} from 'next';
 
-const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1] || 'wave-cutter';
+const repoName = 'wave-cutter';
 
 const nextConfig: NextConfig = {
   /* config options here */
