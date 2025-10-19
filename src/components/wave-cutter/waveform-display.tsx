@@ -144,7 +144,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
   useEffect(() => {
     draw();
-  }, [draw, zoom, pan]);
+  }, [draw, zoom]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -153,12 +153,8 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     const handleResize = () => draw();
     const handleScroll = () => {
         if(zoom > 1 && containerRef.current) {
-            const scrollWidth = containerRef.current.scrollWidth;
-            const clientWidth = containerRef.current.clientWidth;
-            if (scrollWidth - clientWidth > 0) {
-              const newPan = containerRef.current.scrollLeft / (scrollWidth - clientWidth);
-              setPan(newPan);
-            }
+            const newPan = containerRef.current.scrollLeft / (containerRef.current.scrollWidth - containerRef.current.clientWidth);
+            setPan(newPan);
         }
     }
     
@@ -332,5 +328,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 };
 
 export default WaveformDisplay;
+
+    
 
     
