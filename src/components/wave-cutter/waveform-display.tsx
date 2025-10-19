@@ -298,5 +298,3 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 };
 
 export default WaveformDisplay;
-
-    
