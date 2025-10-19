@@ -37,15 +37,15 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState(0); // 0 to 1
 
-  const computedStyle = getComputedStyle(document.documentElement);
-  const primaryColor = `hsl(${computedStyle.getPropertyValue('--primary').trim()})`;
-  const destructiveColor = `hsl(${computedStyle.getPropertyValue('--destructive').trim()})`;
-  const accentColor = `hsl(${computedStyle.getPropertyValue('--accent').trim()})`;
-
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !containerRef.current) return;
     const audioData = audioBuffer.getChannelData(0);
+
+    const computedStyle = getComputedStyle(document.documentElement);
+    const primaryColor = `hsl(${computedStyle.getPropertyValue('--primary').trim()})`;
+    const destructiveColor = `hsl(${computedStyle.getPropertyValue('--destructive').trim()})`;
+    const accentColor = `hsl(${computedStyle.getPropertyValue('--accent').trim()})`;
 
     const dpr = window.devicePixelRatio || 1;
     const containerWidth = containerRef.current.clientWidth;
@@ -65,13 +65,12 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     
-    // The visible portion of the audio data
-    const viewStartSample = Math.floor(pan * (audioBuffer.length * (1 - 1/zoom)));
-    const viewEndSample = viewStartSample + Math.floor(audioBuffer.length / zoom);
+    const scrollLeft = pan * (canvasWidth - containerWidth);
+    const viewStartSample = (scrollLeft / canvasWidth) * audioBuffer.length;
+    const viewEndSample = viewStartSample + (containerWidth / canvasWidth) * audioBuffer.length;
     
     const samplesPerPixel = (viewEndSample - viewStartSample) / containerWidth;
 
-    // Helper to convert a sample index to a canvas x-coordinate
     const sampleToX = (sample: number) => {
         return ((sample - viewStartSample) / (viewEndSample - viewStartSample)) * containerWidth;
     }
@@ -111,28 +110,29 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     for (let i = 0; i < containerWidth; i++) {
         let min = 1.0;
         let max = -1.0;
-        const startSample = Math.floor(viewStartSample + i * samplesPerPixel);
-        const endSampleForPixel = Math.floor(startSample + samplesPerPixel);
-
-        for (let j = startSample; j < endSampleForPixel; j++) {
-            if (j < audioData.length) {
+        const startSampleForPixel = Math.floor(viewStartSample + i * samplesPerPixel);
+        const endSampleForPixel = Math.floor(startSampleForPixel + samplesPerPixel);
+        
+        for (let j = startSampleForPixel; j < endSampleForPixel; j++) {
+            if (j >= 0 && j < audioData.length) {
                 const datum = audioData[j];
                 if (datum < min) min = datum;
                 if (datum > max) max = datum;
             }
         }
-        ctx.lineTo(i, (1 + min) * middle);
-        ctx.lineTo(i, (1 + max) * middle);
+        const x = i;
+        ctx.lineTo(x, (1 + min) * middle);
+        ctx.lineTo(x, (1 + max) * middle);
     }
     ctx.stroke();
 
     // Draw playback cursor
     if (playbackProgress !== null && playingSliceId) {
         const cursorSample = playbackProgress * audioBuffer.length;
-        if (cursorSample >= viewStartSample && cursorSample <= viewEndSample) {
+        const x = sampleToX(cursorSample);
+        if (x >= 0 && x <= containerWidth) {
             ctx.strokeStyle = destructiveColor;
             ctx.lineWidth = 1;
-            const x = sampleToX(cursorSample);
             ctx.beginPath();
             ctx.moveTo(x, 0);
             ctx.lineTo(x, canvasHeight);
@@ -140,7 +140,11 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         }
     }
 
-  }, [audioBuffer, slices, selection, playingSliceId, playbackProgress, zoom, pan, primaryColor, destructiveColor, accentColor]);
+  }, [audioBuffer, slices, selection, playingSliceId, playbackProgress, zoom, pan]);
+
+  useEffect(() => {
+    draw();
+  }, [draw, zoom, pan]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -148,42 +152,30 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     const handleResize = () => draw();
     const handleScroll = () => {
-        if(zoom > 1) {
-            const newPan = container.scrollLeft / (container.scrollWidth - container.clientWidth);
-            setPan(newPan);
+        if(zoom > 1 && containerRef.current) {
+            const scrollWidth = containerRef.current.scrollWidth;
+            const clientWidth = containerRef.current.clientWidth;
+            if (scrollWidth - clientWidth > 0) {
+              const newPan = containerRef.current.scrollLeft / (scrollWidth - clientWidth);
+              setPan(newPan);
+            }
         }
     }
     
     window.addEventListener('resize', handleResize);
     container.addEventListener('scroll', handleScroll);
-    draw();
-
+    
     return () => {
         window.removeEventListener('resize', handleResize);
         container.removeEventListener('scroll', handleScroll);
     };
   }, [draw, zoom]);
-
-  useEffect(() => {
-    // When pan changes, we need to redraw
-    draw();
-  }, [pan, draw]);
   
   useEffect(() => {
     if(!playingSliceId) {
       setPlaybackProgress(null);
     }
   }, [playingSliceId, setPlaybackProgress]);
-
-
-  const getSampleFromX = (x: number) => {
-    if (!containerRef.current) return 0;
-    const scrollLeft = zoom > 1 ? containerRef.current.scrollLeft : 0;
-    const visibleWidth = containerRef.current.clientWidth;
-    const absoluteX = x + scrollLeft;
-    const progress = absoluteX / (visibleWidth * zoom);
-    return progress * audioBuffer.length;
-  }
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     setIsSelecting(true);
@@ -212,8 +204,11 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   
   const handleCreateSlice = () => {
     if(selection && containerRef.current && selection.end - selection.start > 0.001) {
-        const startProgress = (selection.start * containerRef.current.clientWidth + (zoom > 1 ? containerRef.current.scrollLeft : 0)) / (containerRef.current.clientWidth * zoom);
-        const endProgress = (selection.end * containerRef.current.clientWidth + (zoom > 1 ? containerRef.current.scrollLeft : 0)) / (containerRef.current.clientWidth * zoom);
+        const scrollLeft = pan * (containerRef.current.scrollWidth - containerRef.current.clientWidth);
+        const containerWidth = containerRef.current.clientWidth;
+
+        const startProgress = (selection.start * containerWidth + scrollLeft) / containerRef.current.scrollWidth;
+        const endProgress = (selection.end * containerWidth + scrollLeft) / containerRef.current.scrollWidth;
 
         onSlice(startProgress, endProgress);
         setSelection(null);
@@ -238,8 +233,12 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       setIsLooping(false);
     } else {
       stopAudio();
-      const startProgress = (selection.start * containerRef.current.clientWidth + (zoom > 1 ? containerRef.current.scrollLeft : 0)) / (containerRef.current.clientWidth * zoom);
-      const endProgress = (selection.end * containerRef.current.clientWidth + (zoom > 1 ? containerRef.current.scrollLeft : 0)) / (containerRef.current.clientWidth * zoom);
+      const scrollLeft = pan * (containerRef.current.scrollWidth - containerRef.current.clientWidth);
+      const containerWidth = containerRef.current.clientWidth;
+      const scrollWidth = containerRef.current.scrollWidth;
+
+      const startProgress = (selection.start * containerWidth + scrollLeft) / scrollWidth;
+      const endProgress = (selection.end * containerWidth + scrollLeft) / scrollWidth;
       
       const start = startProgress * audioBuffer.duration;
       const duration = (endProgress - startProgress) * audioBuffer.duration;
@@ -262,6 +261,8 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     e.preventDefault();
+    if (!containerRef.current) return;
+
     const zoomFactor = 1.1;
     let newZoom;
     if (e.deltaY < 0) {
@@ -270,29 +271,25 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         newZoom = Math.max(zoom / zoomFactor, 1);
     }
 
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      
-      const oldScrollWidth = containerRef.current.scrollWidth;
-      const oldScrollLeft = containerRef.current.scrollLeft;
+    if (newZoom === zoom) return;
 
-      const pointerTime = (oldScrollLeft + mouseX) / oldScrollWidth;
+    const rect = containerRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    
+    const oldScrollWidth = containerRef.current.scrollWidth;
+    const oldScrollLeft = containerRef.current.scrollLeft;
 
-      setZoom(newZoom);
+    const pointerTime = (oldScrollLeft + mouseX) / oldScrollWidth;
+    
+    setZoom(newZoom);
 
-      // We need to wait for the DOM to update with the new zoom
-      // to get the new scrollWidth.
-      requestAnimationFrame(() => {
-        if(containerRef.current) {
-          const newScrollWidth = containerRef.current.scrollWidth;
-          const newScrollLeft = pointerTime * newScrollWidth - mouseX;
-          containerRef.current.scrollLeft = newScrollLeft;
-        }
-      });
-    } else {
-      setZoom(newZoom);
-    }
+    requestAnimationFrame(() => {
+      if(containerRef.current) {
+        const newScrollWidth = containerRef.current.scrollWidth;
+        const newScrollLeft = pointerTime * newScrollWidth - mouseX;
+        containerRef.current.scrollLeft = newScrollLeft;
+      }
+    });
   };
 
 
@@ -334,3 +331,5 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 };
 
 export default WaveformDisplay;
+
+    
