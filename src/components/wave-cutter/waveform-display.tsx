@@ -31,6 +31,20 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   const [isSelecting, setIsSelecting] = useState(false);
   const [isLooping, setIsLooping] = useState(false);
   const { toast } = useToast();
+  const [themeColors, setThemeColors] = useState({ primary: "hsl(120 100% 75%)", destructive: "hsl(0 84.2% 60.2%)"});
+
+  useEffect(() => {
+    // This effect runs on the client after mount to get the computed CSS variables
+    if (canvasRef.current) {
+        const computedStyles = getComputedStyle(canvasRef.current);
+        const primary = computedStyles.getPropertyValue('--primary').trim();
+        const destructive = computedStyles.getPropertyValue('--destructive').trim();
+        setThemeColors({
+            primary: `hsl(${primary})`,
+            destructive: `hsl(${destructive})`,
+        });
+    }
+  }, []);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -56,11 +70,11 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     
     // Draw selection
     if (selection) {
-      ctx.fillStyle = playingSliceId === 'selection' || playingSliceId === 'selection_loop' ? "hsla(var(--primary), 0.2)" : "hsla(var(--primary), 0.1)";
+      ctx.fillStyle = playingSliceId === 'selection' || playingSliceId === 'selection_loop' ? themeColors.primary.replace(')', ', 0.2)') : themeColors.primary.replace(')', ', 0.1)');
       const startX = selection.start * width;
       const endX = selection.end * width;
       ctx.fillRect(startX, 0, endX - startX, height);
-      ctx.strokeStyle = "hsl(var(--primary))";
+      ctx.strokeStyle = themeColors.primary;
       ctx.lineWidth = 1;
       ctx.strokeRect(startX, 0, endX - startX, height);
     }
@@ -70,17 +84,17 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       const startX = (slice.start / audioBuffer.length) * width;
       const endX = (slice.end / audioBuffer.length) * width;
       if (playingSliceId === slice.id) {
-          ctx.fillStyle = "hsla(var(--primary), 0.2)";
+          ctx.fillStyle = themeColors.primary.replace(')', ', 0.2)');
           ctx.fillRect(startX, 0, endX - startX, height);
       }
-      ctx.strokeStyle = "hsl(var(--primary))";
+      ctx.strokeStyle = themeColors.primary;
       ctx.lineWidth = 1;
       ctx.strokeRect(startX, 0, endX - startX, height);
     });
 
     // Draw waveform
     ctx.lineWidth = 2;
-    ctx.strokeStyle = "hsl(var(--primary))";
+    ctx.strokeStyle = themeColors.primary;
     ctx.beginPath();
     ctx.moveTo(0, middle);
 
@@ -100,7 +114,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     // Draw playback cursor
     if (playbackProgress !== null && playingSliceId) {
-        ctx.strokeStyle = "hsl(var(--destructive))";
+        ctx.strokeStyle = themeColors.destructive;
         ctx.lineWidth = 1;
         const x = playbackProgress * width;
         ctx.beginPath();
@@ -109,7 +123,7 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         ctx.stroke();
     }
 
-  }, [audioBuffer, slices, selection, playingSliceId, playbackProgress]);
+  }, [audioBuffer, slices, selection, playingSliceId, playbackProgress, themeColors]);
 
   useEffect(() => {
     draw();
@@ -203,6 +217,11 @@ const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
           className="w-full h-full cursor-crosshair"
+          style={{
+            // Pass CSS vars to JS -- see useEffect above
+            '--primary': 'var(--primary)',
+            '--destructive': 'var(--destructive)',
+          } as React.CSSProperties}
         />
       </div>
       {selection && (
